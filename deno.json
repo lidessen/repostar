@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "dev": "deno run -A main.ts"
+  },
+  "imports": {
+    "@std/dotenv": "jsr:@std/dotenv@^0.224.0",
+    "octokit": "https://esm.sh/octokit@4.0.2?dts",
+    "ora": "npm:ora@^8.0.1"
+  }
+}
