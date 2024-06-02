@@ -3,8 +3,10 @@
     "dev": "deno run -A main.ts"
   },
   "imports": {
+    "@azure/identity": "npm:@azure/identity@^4.2.0",
     "@std/dotenv": "jsr:@std/dotenv@^0.224.0",
     "octokit": "https://esm.sh/octokit@4.0.2?dts",
+    "openai": "https://deno.land/x/openai@v4.47.3/mod.ts",
     "ora": "npm:ora@^8.0.1"
   }
 }

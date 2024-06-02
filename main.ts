@@ -1,27 +1,27 @@
-import { load } from "@std/dotenv";
-import { Octokit } from "octokit";
 import ora from "ora";
-
-const env = await load();
-
-const octokit = new Octokit({ auth: env["GITHUB_ACCESS_TOKEN"] });
-
-const iterator = octokit.paginate.iterator(
-  octokit.rest.activity.listReposStarredByAuthenticatedUser,
-  {
-    per_page: 100,
-  },
-);
-
-type Repo = Awaited<
-  ReturnType<typeof octokit.rest.activity.listReposStarredByAuthenticatedUser>
->["data"][number];
+import { fetchStarredRepos, Repo } from "./github.ts";
+import { repoTags } from "./openai.ts";
 
 const allRepos: Repo[] = [];
+const allTags: Record<string, string[]> = {};
 
 const spinner = ora("Fetching starred repos").start();
 
-for await (const { data: repos } of iterator) {
+for await (const repos of fetchStarredRepos()) {
+  spinner.text = "Generating tags for repos";
+  const tags = await repoTags(repos.map(repoData));
+  spinner.text = "Generated tags for repos";
+  try {
+    if (tags) {
+      const parsed = JSON.parse(tags);
+      for (const key in parsed) {
+        allTags[key] = parsed[key];
+      }
+    }
+  } catch {
+    console.error("Failed to parse tags");
+  }
+
   for (const repo of repos) {
     allRepos.push(repo);
   }
@@ -30,19 +30,21 @@ for await (const { data: repos } of iterator) {
 
 spinner.succeed(`Fetched ${allRepos.length} starred repos`);
 
-function mapRepo(repo: Repo) {
+await Deno.mkdir("outputs", { recursive: true });
+await Deno.writeTextFile(
+  "outputs/starred-repos.json",
+  JSON.stringify(allRepos.map(repoData), null, 2),
+);
+
+console.log("Update starred-repos.json");
+
+function repoData(repo: Repo) {
   return {
     name: repo.full_name,
     description: repo.description,
     url: repo.html_url,
     language: repo.language,
     stars: repo.stargazers_count,
+    tags: allTags[repo.full_name] || [],
   };
 }
-
-await Deno.writeTextFile(
-  "outputs/starred-repos.json",
-  JSON.stringify(allRepos.map(mapRepo), null, 2),
-);
-
-console.log("Update starred-repos.json");
